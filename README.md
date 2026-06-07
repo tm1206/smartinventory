@@ -1,6 +1,9 @@
 # SmartInventory — Inventory Management System
 
-Spring Boot 3.5 · Java 21 · AWS (S3, SQS, SES, CloudWatch) · H2 (local) · PostgreSQL (Railway)
+Spring Boot 3.5 · Java 21 · React 18 · AWS (S3, SQS, SES, CloudWatch) · H2 (local) · PostgreSQL (Railway)
+
+**Frontend:** https://smartinventory-frontend.vercel.app  
+**API / Swagger:** https://smartinventory-production-2890.up.railway.app/swagger-ui/index.html
 
 ---
 
@@ -52,6 +55,7 @@ Spring Boot 3.5 · Java 21 · AWS (S3, SQS, SES, CloudWatch) · H2 (local) · Po
 | GET | `/api/admin/users/{id}` | User by ID |
 | PUT | `/api/admin/users/{id}/role?role=` | Update user role |
 | PUT | `/api/admin/users/{id}/status?active=` | Activate/deactivate user |
+| PUT | `/api/admin/users/{id}/password?password=` | Reset user password (BCrypt encoded) |
 | GET | `/api/admin/audit-logs` | Paginated audit logs |
 
 ### Other

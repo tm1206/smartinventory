@@ -20,6 +20,7 @@
 12. [Frontend Guide](#12-frontend-guide)
 13. [Troubleshooting](#13-troubleshooting)
 14. [Future Improvements](#14-future-improvements)
+15. [React Frontend](#15-react-frontend)
 
 ---
 
@@ -27,7 +28,7 @@
 
 ### What It Is
 
-SmartInventory is a production-grade REST API backend for managing business inventory. It handles products, orders, users, and reporting — all backed by a PostgreSQL database on Railway and integrated with four AWS services.
+SmartInventory is a full-stack inventory management application: a production-grade Spring Boot REST API backend paired with a React 18 frontend. It handles products, orders, users, and reporting — backed by PostgreSQL on Railway, with the frontend deployed to Vercel and integrated with four AWS cloud services.
 
 ### Why It Was Built
 
@@ -42,6 +43,7 @@ Built as a portfolio project to demonstrate:
 
 | Resource | URL |
 |---|---|
+| Frontend | `https://smartinventory-frontend.vercel.app` |
 | API Base | `https://smartinventory-production-2890.up.railway.app` |
 | Swagger UI | `https://smartinventory-production-2890.up.railway.app/swagger-ui/index.html` |
 | API Docs (JSON) | `https://smartinventory-production-2890.up.railway.app/v3/api-docs` |
@@ -1266,6 +1268,21 @@ curl -X PUT "https://smartinventory-production-2890.up.railway.app/api/admin/use
 
 ---
 
+#### PUT /api/admin/users/{id}/password
+
+```bash
+curl -X PUT "https://smartinventory-production-2890.up.railway.app/api/admin/users/5/password?password=NewPass123!" \
+  -H "Authorization: Bearer eyJhbGci..."
+```
+
+**Query param:** `password` = new plaintext password (BCrypt-encoded server-side before storing)
+
+**Response 200:** `{ "success": true, "message": "Password reset successfully", "data": { <User> } }`
+
+**Auth required:** ADMIN only. Writes a `PASSWORD_RESET` audit log entry on every call.
+
+---
+
 #### GET /api/admin/audit-logs
 
 ```bash
@@ -1588,6 +1605,16 @@ JWT_SECRET             = <min 64 character random string>
 git add .
 git commit -m "your message"
 git push origin main
+```
+
+GitHub auto-deploy is configured — the Railway service is linked to the `tm1206/smartinventory` repo on the `main` branch. Any push triggers a new Railway deployment automatically.
+
+To connect the service to GitHub for the first time (or reconnect after unlinking):
+```bash
+railway service source connect \
+  --repo tm1206/smartinventory \
+  --branch main \
+  --service smartinventory
 ```
 
 **Option 2 — Railway CLI:**
@@ -2253,8 +2280,8 @@ Add `@Version private Integer version` to `Product`. Hibernate will add a `versi
 **Transactional Outbox for SQS**
 Currently, if SQS publish fails after order commit, the order is stuck in PENDING. Replace direct SQS publish with: write to an `outbox_events` table in the same transaction as the order, then run a scheduled job that reads unprocessed events, publishes to SQS, and marks them done. This guarantees at-least-once delivery.
 
-**Password Reset Flow**
-`SESService.sendPasswordResetEmail()` exists but is not wired to any endpoint. Add `POST /api/auth/forgot-password` and `POST /api/auth/reset-password` with secure token generation and expiry.
+**Password Reset Flow** *(partial — admin reset done)*
+`SESService.sendPasswordResetEmail()` exists but is not wired to an endpoint. An admin-only reset endpoint `PUT /api/admin/users/{id}/password` was added (BCrypt-encodes before storing). Self-service flow (`POST /api/auth/forgot-password` + email link) still pending.
 
 **Refresh Token Rotation Validation**
 Currently any valid refresh token works. Add refresh token family tracking to detect token reuse (if a stolen refresh token is used, invalidate the entire token family).
@@ -2284,11 +2311,11 @@ Add JUnit 5 tests with Mockito for services, and Spring Boot integration tests w
 **Docker Compose for Local Dev**
 Add `docker-compose.yml` to spin up PostgreSQL + the app locally, eliminating the need for H2 and making local behavior match production.
 
-**Frontend Application**
-Build a React (TypeScript) frontend consuming this API. The `FRONTEND_GUIDE.md` in this repo documents all contracts. Priority screens: Login, Product List, Add Product, Orders, Reports dashboard.
+**Frontend Application** ✅ *COMPLETED*
+React 18 + Vite SPA deployed at `https://smartinventory-frontend.vercel.app`. Covers all screens: Login, Dashboard, Products, Orders, Admin. Source: `frontend/` folder in the GitHub repo. See Section 15 for full details.
 
-**Admin Dashboard**
-Dedicated admin UI for user management and audit log viewing. Could be a separate service or embedded in the React app behind role checks.
+**Admin Dashboard** ✅ *COMPLETED*
+Embedded in the React frontend behind `isAdmin` role check. Tabs: User Management (role/status controls, password reset) and Audit Logs (paginated, newest first).
 
 ### How to Scale
 
@@ -2315,3 +2342,106 @@ Add distributed tracing with OpenTelemetry + Jaeger. Add Prometheus metrics endp
 ---
 
 *This document covers the entire SmartInventory backend as of June 2026. For the latest code, see [github.com/tm1206/smartinventory](https://github.com/tm1206/smartinventory).*
+
+---
+
+## 15. React Frontend
+
+### Overview
+
+A React 18 single-page application that consumes all SmartInventory API endpoints. Deployed to Vercel with zero-config CI/CD — every push to the `frontend` folder on GitHub triggers a Vercel redeploy automatically.
+
+| Item | Detail |
+|---|---|
+| Live URL | `https://smartinventory-frontend.vercel.app` |
+| Source | `frontend/` subfolder of `github.com/tm1206/smartinventory` |
+| Framework | React 18 + Vite |
+| Styling | TailwindCSS |
+| Routing | React Router v6 |
+| HTTP | Axios with interceptors |
+| Icons | Lucide React |
+
+### Tech Stack Details
+
+| Package | Purpose |
+|---|---|
+| `react` 18 | UI rendering |
+| `vite` | Dev server and production bundler |
+| `tailwindcss` | Utility-first styling |
+| `react-router-dom` v6 | Client-side routing |
+| `axios` | HTTP client with JWT interceptor |
+| `lucide-react` | Icon set |
+| `recharts` | Dashboard charts |
+
+### Pages
+
+| Route | Page | Access |
+|---|---|---|
+| `/login` | Login | Public |
+| `/dashboard` | Dashboard | All roles |
+| `/products` | Products | All roles (write: MANAGER+) |
+| `/orders` | Orders | All roles (all orders: MANAGER+) |
+| `/admin` | Admin Panel | ADMIN only |
+
+### Role-Based UI
+
+Role checks use `isAdmin` and `isManager` booleans from `AuthContext`:
+
+| Feature | STAFF | MANAGER | ADMIN |
+|---|---|---|---|
+| Admin sidebar link | Hidden | Hidden | Visible |
+| Products — Add / Edit | Hidden | Visible | Visible |
+| Products — Delete | Hidden | Hidden | Visible |
+| Orders — All orders view | No | Yes | Yes |
+| Orders — Status dropdown | No | Yes | Yes |
+| Orders — heading | "My Orders" | "All Orders" | "All Orders" |
+| Dashboard — low stock alerts | Yes | Yes | Yes |
+
+### JWT Authentication
+
+`src/api/axios.js` creates an Axios instance with:
+- `baseURL`: Railway API (`https://smartinventory-production-2890.up.railway.app`)
+- Request interceptor: attaches `Authorization: Bearer <accessToken>` from `localStorage`
+- Response interceptor: on 401, calls `POST /api/auth/refresh` with the stored `refreshToken`, retries queued requests with the new token, and redirects to `/login` if refresh fails
+
+### Key Files
+
+| File | Purpose |
+|---|---|
+| `src/api/axios.js` | Axios instance with JWT auto-refresh |
+| `src/context/AuthContext.jsx` | Login, logout, role helpers, token storage |
+| `src/pages/Login.jsx` | Credential form |
+| `src/pages/Dashboard.jsx` | Stats cards + recharts bar chart |
+| `src/pages/Products.jsx` | Paginated product table, Add/Edit modal, category filter |
+| `src/pages/Orders.jsx` | Orders table, row-expand for line items, status update |
+| `src/pages/Admin.jsx` | User management + audit logs tabs |
+| `src/components/Sidebar.jsx` | Navigation with role-gated Admin link |
+| `vercel.json` | SPA routing: all paths rewrite to `/index.html` |
+
+### Vercel Deployment
+
+```bash
+# From repo root, deploy frontend only
+cd frontend
+vercel --prod
+```
+
+Or via GitHub: push to the `main` branch and Vercel auto-deploys (connected via Vercel dashboard → Import Project → `tm1206/smartinventory` → Root Directory: `frontend`).
+
+### Running Locally
+
+```bash
+cd frontend
+npm install
+npm run dev       # starts at http://localhost:5173
+```
+
+The API calls go to Railway production by default (configured in `src/api/axios.js`). To point at a local backend, change `baseURL` to `http://localhost:8080`.
+
+### Test Data (as of June 2026)
+
+- **12 products** across 7 categories (Electronics, Peripherals, Networking, Storage, Audio, Gaming, Accessories)
+- **3 low-stock items** (quantity < 10): Gaming Mouse (4), Webcam (7), Portable SSD (1)
+- **14 orders** covering all 4 statuses: PENDING, CONFIRMED, SHIPPED, DELIVERED
+- **12 users**: 1 ADMIN (`admin`), multiple MANAGERs and STAFFs
+- Dashboard totals: $107,812.20 inventory value, 7 categories
