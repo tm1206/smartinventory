@@ -14,6 +14,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -29,6 +30,7 @@ public class AdminController {
 
     private final UserRepository userRepository;
     private final AuditLogService auditLogService;
+    private final PasswordEncoder passwordEncoder;
 
     @GetMapping("/users")
     @Operation(summary = "Get all users")
@@ -69,6 +71,19 @@ public class AdminController {
         user.setActive(active);
         user = userRepository.save(user);
         return ResponseEntity.ok(ApiResponse.success("User status updated", toUserResponse(user)));
+    }
+
+    @PutMapping("/users/{id}/password")
+    @Operation(summary = "Reset user password")
+    public ResponseEntity<ApiResponse<UserResponse>> resetUserPassword(
+            @PathVariable Long id,
+            @RequestParam String password) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new com.smartinventory.exception.ResourceNotFoundException("User", "id", id));
+        user.setPassword(passwordEncoder.encode(password));
+        user = userRepository.save(user);
+        auditLogService.log("admin", "PASSWORD_RESET", "User", id.toString(), "Password reset by admin", null);
+        return ResponseEntity.ok(ApiResponse.success("Password reset successfully", toUserResponse(user)));
     }
 
     @GetMapping("/audit-logs")
