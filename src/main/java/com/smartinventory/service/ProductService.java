@@ -6,6 +6,7 @@ import com.smartinventory.exception.InsufficientStockException;
 import com.smartinventory.exception.ResourceNotFoundException;
 import com.smartinventory.model.Product;
 import com.smartinventory.repository.ProductRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -130,9 +131,13 @@ public class ProductService {
     public void deleteProduct(Long id, String username) {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Product", "id", id));
-
-        productRepository.delete(product);
-
+        try {
+            productRepository.delete(product);
+            productRepository.flush();
+        } catch (DataIntegrityViolationException e) {
+            throw new IllegalArgumentException(
+                "Cannot delete '" + product.getName() + "' — it is referenced by existing orders");
+        }
         auditLogService.log(username, "PRODUCT_DELETED", "Product",
                 id.toString(), "Product deleted: " + product.getName(), null);
     }
