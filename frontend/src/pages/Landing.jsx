@@ -143,7 +143,7 @@ export default function Landing() {
 
           <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              to="/login"
+              to="/signup"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-6 py-3 text-sm font-semibold transition-all hover:scale-[1.02] active:scale-100 shadow-lg shadow-indigo-600/25"
             >
               Get Started
@@ -261,7 +261,7 @@ export default function Landing() {
           </p>
           <div className="mt-7 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
-              to="/login"
+              to="/signup"
               className="inline-flex items-center justify-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 px-6 py-3 text-sm font-semibold transition-all hover:scale-[1.02] active:scale-100 shadow-lg shadow-indigo-600/25"
             >
               Get Started

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, Navigate, Link } from 'react-router-dom';
 import { Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '../context/AuthContext';
@@ -90,8 +90,14 @@ export default function Login() {
           </button>
         </form>
 
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Default: admin@smartinventory.com / admin123
+        <p className="text-center text-sm text-gray-500 mt-6">
+          Don't have an account?{' '}
+          <Link to="/signup" className="text-indigo-600 font-medium hover:text-indigo-700">
+            Sign Up
+          </Link>
+        </p>
+        <p className="text-center text-xs text-gray-400 mt-2">
+          Default: admin / admin123
         </p>
       </div>
     </div>
