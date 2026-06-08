@@ -9,7 +9,6 @@ import LoadingSpinner from '../components/LoadingSpinner';
 const ROLES = [
   { value: 'STAFF',   label: 'Staff — view products, place orders' },
   { value: 'MANAGER', label: 'Manager — manage products & orders' },
-  { value: 'ADMIN',   label: 'Admin — full access' },
 ];
 
 export default function Signup() {
