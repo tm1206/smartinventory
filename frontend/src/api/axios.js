@@ -1,4 +1,5 @@
 import axios from 'axios';
+import toast from 'react-hot-toast';
 
 const BASE_URL = 'https://smartinventory-production-2890.up.railway.app';
 
@@ -75,6 +76,16 @@ api.interceptors.response.use(
       } finally {
         isRefreshing = false;
       }
+    }
+
+    // 403 — show Access Denied toast (toast ID deduplicates if page also shows one)
+    if (error.response?.status === 403) {
+      toast.error('Access denied. You do not have permission for this action.', { id: 'access-denied' });
+    }
+
+    // Network error (no response at all)
+    if (!error.response) {
+      toast.error('Server unavailable. Please check your connection.', { id: 'network-error' });
     }
 
     return Promise.reject(error);

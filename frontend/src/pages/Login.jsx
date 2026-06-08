@@ -17,6 +17,16 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (!form.username.trim()) {
+      setError('Username is required.');
+      return;
+    }
+    if (!form.password) {
+      setError('Password is required.');
+      return;
+    }
+
     setLoading(true);
     try {
       await login(form.username, form.password);
@@ -45,7 +55,7 @@ export default function Login() {
           <p className="text-gray-500 text-sm mt-1">Sign in to your account</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5" noValidate>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Username
