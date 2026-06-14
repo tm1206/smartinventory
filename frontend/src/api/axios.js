@@ -35,7 +35,12 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    // Never intercept 401s from auth endpoints — those are real credential errors
+    // that must propagate to the Login/Signup page catch block to show the error message.
+    const isAuthEndpoint = originalRequest.url?.includes('/api/auth/login') ||
+                           originalRequest.url?.includes('/api/auth/register');
+
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
